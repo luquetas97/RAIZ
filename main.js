@@ -165,10 +165,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const eased = 1 - Math.pow(1 - progress, 3);
           const value = Math.round(eased * target);
           el.querySelector('.count-value').textContent = value + suffix;
-          if (progress < 1) requestAnimation(
+          if (progress < 1) requestAnimation(tick);
         };
 
-        requestAnimation(
+        requestAnimationFrame(tick);
         countObserver.unobserve(el);
       }
     });
