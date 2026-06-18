@@ -3,7 +3,11 @@
    ============================================= */
 
 document.addEventListener('DOMContentLoaded', () => {
+if ('scrollRestoration' in history) {
+  history.scrollRestoration = 'manual';
+}
 
+window.scrollTo(0, 0);
   /* ---- NAV: scroll effect ---- */
   const nav = document.querySelector('.nav');
   window.addEventListener('scroll', () => {
@@ -165,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const eased = 1 - Math.pow(1 - progress, 3);
           const value = Math.round(eased * target);
           el.querySelector('.count-value').textContent = value + suffix;
-          if (progress < 1) requestAnimation(tick);
+          if (progress < 1) requestAnimationFrame(tick);
         };
 
         requestAnimationFrame(tick);
@@ -282,7 +286,23 @@ if (heroScrollContainer && window.innerWidth > 768) {
     );
 
     desiredFrame = safeIndex;
+desiredFrame = safeIndex;
 
+// Precargar solamente los frames cercanos
+for (let offset = 1; offset <= 3; offset++) {
+  const previousFrame = safeIndex - offset;
+  const nextFrame = safeIndex + offset;
+
+  if (previousFrame >= 0) {
+    loadFrame(previousFrame).catch(() => {});
+  }
+
+  if (nextFrame < TOTAL_FRAMES) {
+    loadFrame(nextFrame).catch(() => {});
+  }
+}
+
+const loadedImage = frames[safeIndex];
     const loadedImage = frames[safeIndex];
 
     if (loadedImage?.naturalWidth > 0) {
@@ -374,7 +394,7 @@ if (heroScrollContainer && window.innerWidth > 768) {
     .then(() => {
       drawFrame(0);
       updateFrameFromScroll();
-      preloadRemainingFrames();
+      
     })
     .catch((error) => {
       console.error('No se pudo iniciar el efecto del hero.', error);
