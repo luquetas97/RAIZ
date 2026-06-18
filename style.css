@@ -1688,3 +1688,13 @@ a {
     justify-content: center;
   }
 }
+
+/* SEGURIDAD: mostrar contenido aunque JavaScript falle */
+.reveal,
+.hero__title .line span,
+.hero__sub,
+.hero__actions,
+.proceso__step {
+  opacity: 1 !important;
+  transform: none !important;
+}
