@@ -165,10 +165,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const eased = 1 - Math.pow(1 - progress, 3);
           const value = Math.round(eased * target);
           el.querySelector('.count-value').textContent = value + suffix;
-          if (progress < 1) requestAnimationFrame(tick);
+          if (progress < 1) requestAnimation(
         };
 
-        requestAnimationFrame(tick);
+        requestAnimation(
         countObserver.unobserve(el);
       }
     });
@@ -177,209 +177,76 @@ document.addEventListener('DOMContentLoaded', () => {
   statNumbers.forEach(el => countObserver.observe(el));
 
   /* ---- CANVAS FRAME SCRUBBING ---- */
-const heroScrollContainer = document.querySelector('.hero-scroll-container');
-const heroVideo = document.querySelector('.hero__video');
+  const heroScrollContainer = document.querySelector('.hero-scroll-container');
+  const heroVideo = document.querySelector('.hero__video');
+  const TOTAL_FRAMES = 120;
+  const frames = [];
+  let framesLoaded = 0;
+  let canvas, ctx;
 
-const TOTAL_FRAMES = 120;
-const frames = new Array(TOTAL_FRAMES);
-const framePromises = new Array(TOTAL_FRAMES);
+  if (heroScrollContainer && window.innerWidth > 768) {
+    // Reemplazar el video por un canvas
+    canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;';
+    if (heroVideo) heroVideo.replaceWith(canvas);
+    else document.querySelector('.hero').prepend(canvas);
+    ctx = canvas.getContext('2d');
 
-let canvas;
-let ctx;
-let desiredFrame = 0;
-let lastDrawnFrame = -1;
-let scrollRaf = null;
-
-if (heroScrollContainer && window.innerWidth > 768) {
-  canvas = document.createElement('canvas');
-  canvas.setAttribute('aria-hidden', 'true');
-
-  canvas.style.cssText = `
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0;
-    display: block;
-  `;
-
-  if (heroVideo) {
-    heroVideo.replaceWith(canvas);
-  } else {
-    document.querySelector('.hero')?.prepend(canvas);
-  }
-
-  ctx = canvas.getContext('2d', {
-    alpha: false
-  });
-
-  const frameURL = (index) => {
-    const number = String(index).padStart(4, '0');
-    return `frame-${number}.jpg`;
-  };
-
-  const loadFrame = (index) => {
-    if (framePromises[index]) {
-      return framePromises[index];
-    }
-
-    framePromises[index] = new Promise((resolve, reject) => {
+    // Precargar todos los frames
+    for (let i = 0; i < TOTAL_FRAMES; i++) {
       const img = new Image();
-      img.decoding = 'async';
-
+      const num = String(i).padStart(4, '0');
+      img.src = `frame-${num}.jpg`;
       img.onload = () => {
-        frames[index] = img;
-        resolve(img);
+        framesLoaded++;
+        if (framesLoaded === 1) {
+          // En cuanto el primer frame carga, dimensionar canvas y mostrarlo
+          canvas.width = frames[0].naturalWidth;
+          canvas.height = frames[0].naturalHeight;
+          ctx.drawImage(frames[0], 0, 0);
+          lastFrame = 0;
+        }
       };
-
-      img.onerror = () => {
-        console.error(`No se pudo cargar: ${frameURL(index)}`);
-        reject(new Error(`Error cargando frame ${index}`));
-      };
-
-      img.src = frameURL(index);
-    });
-
-    return framePromises[index];
-  };
-
-  const resizeCanvas = () => {
-    const rect = canvas.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-
-    canvas.width = Math.max(1, Math.round(rect.width * dpr));
-    canvas.height = Math.max(1, Math.round(rect.height * dpr));
-
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  };
-
-  const renderImageCover = (img) => {
-    if (!img || !img.naturalWidth || !img.naturalHeight) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const canvasWidth = rect.width;
-    const canvasHeight = rect.height;
-
-    const scale = Math.max(
-      canvasWidth / img.naturalWidth,
-      canvasHeight / img.naturalHeight
-    );
-
-    const drawWidth = img.naturalWidth * scale;
-    const drawHeight = img.naturalHeight * scale;
-
-    const drawX = (canvasWidth - drawWidth) / 2;
-    const drawY = (canvasHeight - drawHeight) / 2;
-
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
-  };
-
-  const drawFrame = (index) => {
-    const safeIndex = Math.max(
-      0,
-      Math.min(TOTAL_FRAMES - 1, index)
-    );
-
-    desiredFrame = safeIndex;
-
-    const loadedImage = frames[safeIndex];
-
-    if (loadedImage?.naturalWidth > 0) {
-      renderImageCover(loadedImage);
-      lastDrawnFrame = safeIndex;
-      return;
+      // Si ya estaba cacheado del browser, onload no dispara — dibujarlo igual
+      if (img.complete) {
+        framesLoaded++;
+        if (framesLoaded === 1) {
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          ctx.drawImage(img, 0, 0);
+          lastFrame = 0;
+        }
+      }
+      frames[i] = img;
     }
 
-    loadFrame(safeIndex)
-      .then((img) => {
-        if (desiredFrame === safeIndex) {
-          renderImageCover(img);
-          lastDrawnFrame = safeIndex;
-        }
-      })
-      .catch(() => {
-        // Si falla un frame, conserva el último frame válido.
-      });
-  };
+    let rafId = null;
+    let lastFrame = -1;
 
-  const updateFrameFromScroll = () => {
-    const rect = heroScrollContainer.getBoundingClientRect();
-
-    const scrollableDistance = Math.max(
-      1,
-      heroScrollContainer.offsetHeight - window.innerHeight
-    );
-
-    const progress = Math.max(
-      0,
-      Math.min(1, -rect.top / scrollableDistance)
-    );
-
-    const frameIndex = Math.round(
-      progress * (TOTAL_FRAMES - 1)
-    );
-
-    drawFrame(frameIndex);
-    scrollRaf = null;
-  };
-
-  const preloadRemainingFrames = async () => {
-    let nextFrame = 1;
-    const concurrentLoads = 6;
-
-    const worker = async () => {
-      while (nextFrame < TOTAL_FRAMES) {
-        const currentFrame = nextFrame++;
-
-        try {
-          await loadFrame(currentFrame);
-        } catch (error) {
-          // Continúa cargando aunque algún frame falle.
-        }
+    const drawFrame = (index) => {
+      const i = Math.max(0, Math.min(TOTAL_FRAMES - 1, index));
+      if (i === lastFrame) return;
+      lastFrame = i;
+      if (frames[i] && frames[i].complete) {
+        ctx.drawImage(frames[i], 0, 0);
       }
     };
 
-    await Promise.all(
-      Array.from(
-        { length: concurrentLoads },
-        () => worker()
-      )
-    );
-  };
+    const scrub = () => {
+      const rect = heroScrollContainer.getBoundingClientRect();
+      const scrollable = heroScrollContainer.offsetHeight - window.innerHeight;
+      const progress = Math.max(0, Math.min(1, -rect.top / scrollable));
+      const frameIndex = Math.round(progress * (TOTAL_FRAMES - 1));
+      drawFrame(frameIndex);
+      rafId = null;
+    };
 
-  window.addEventListener(
-    'scroll',
-    () => {
-      if (scrollRaf === null) {
-        scrollRaf = requestAnimationFrame(updateFrameFromScroll);
-      }
-    },
-    { passive: true }
-  );
+    window.addEventListener('scroll', () => {
+      if (!rafId) rafId = requestAnimationFrame(scrub);
+    }, { passive: true });
 
-  window.addEventListener('resize', () => {
-    requestAnimationFrame(() => {
-      resizeCanvas();
-
-      if (lastDrawnFrame >= 0) {
-        drawFrame(desiredFrame);
-      }
-    });
-  });
-
-  resizeCanvas();
-
-  loadFrame(0)
-    .then(() => {
-      drawFrame(0);
-      updateFrameFromScroll();
-      preloadRemainingFrames();
-    })
-    .catch((error) => {
-      console.error('No se pudo iniciar el efecto del hero.', error);
-    });
-}
+    scrub();
+  }
 
   /* ---- SMOOTH hover cursor trail on hero ---- */
   const hero = document.querySelector('.hero');
