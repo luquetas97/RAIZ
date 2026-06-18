@@ -160,20 +160,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const start = performance.now();
 
         const tick = (now) => {
-  const elapsed = now - start;
-  const progress = Math.min(elapsed / duration, 1);
-  const eased = 1 - Math.pow(1 - progress, 3);
-  const value = Math.round(eased * target);
+          const elapsed = now - start;
+          const progress = Math.min(elapsed / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          const value = Math.round(eased * target);
+          el.querySelector('.count-value').textContent = value + suffix;
+          if (progress < 1) requestAnimation(tick);
+        };
 
-  el.querySelector('.count-value').textContent = value + suffix;
-
-  if (progress < 1) {
-    requestAnimationFrame(tick);
-  }
-};
-
-requestAnimationFrame(tick);
-countObserver.unobserve(el);
+        requestAnimationFrame(tick);
+        countObserver.unobserve(el);
       }
     });
   }, { threshold: 0.5 });
