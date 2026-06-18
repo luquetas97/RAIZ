@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     for (let i = 0; i < TOTAL_FRAMES; i++) {
       const img = new Image();
       const num = String(i).padStart(4, '0');
-      img.src = `assets/frames/frame-${num}.jpg`;
+      img.src = `frame-${num}.jpg`;
       img.onload = () => {
         framesLoaded++;
         if (framesLoaded === 1) {
