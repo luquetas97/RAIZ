@@ -110,11 +110,11 @@ document.addEventListener('DOMContentLoaded', () => {
     progressBar.style.transition = 'none';
     progressBar.style.width = '0%';
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        progressBar.style.transition = `width ${AUTO_DELAY}ms linear`;
-        progressBar.style.width = '100%';
-      });
-    });
+  requestAnimationFrame(() => {
+    progressBar.style.transition = `width ${AUTO_DELAY}ms linear`;
+    progressBar.style.width = '100%';
+  });
+});
   };
 
   const startAuto = () => {
@@ -165,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const eased = 1 - Math.pow(1 - progress, 3);
           const value = Math.round(eased * target);
           el.querySelector('.count-value').textContent = value + suffix;
-          if (progress < 1) requestAnimationFrame(tick);
+          if (progress < 1) requestAnimation(tick);
         };
 
         requestAnimationFrame(tick);
