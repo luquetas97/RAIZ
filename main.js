@@ -148,33 +148,57 @@ document.addEventListener('DOMContentLoaded', () => {
   startAuto();
 
   /* ---- COUNTER ANIMATION ---- */
-  const statNumbers = document.querySelectorAll('[data-count]');
+const statNumbers = document.querySelectorAll('[data-count]');
 
-  const countObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const el = entry.target;
-        const target = parseInt(el.dataset.count, 10);
-        const suffix = el.dataset.suffix || '';
-        const duration = 1600;
-        const start = performance.now();
+const animateCounter = (el) => {
+  if (el.dataset.counted === 'true') return;
 
-        const tick = (now) => {
-          const elapsed = now - start;
-          const progress = Math.min(elapsed / duration, 1);
-          const eased = 1 - Math.pow(1 - progress, 3);
-          const value = Math.round(eased * target);
-          el.querySelector('.count-value').textContent = value + suffix;
-          if (progress < 1) requestAnimationFrame(tick);
-        };
+  const valueElement = el.querySelector('.count-value');
+  if (!valueElement) return;
 
-        requestAnimationFrame(tick);
-        countObserver.unobserve(el);
-      }
-    });
-  }, { threshold: 0.5 });
+  el.dataset.counted = 'true';
 
-  statNumbers.forEach(el => countObserver.observe(el));
+  const target = Number(el.dataset.count) || 0;
+  const suffix = el.dataset.suffix || '';
+  const duration = 1600;
+  const startTime = performance.now();
+
+  const tick = (now) => {
+    const progress = Math.min((now - startTime) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const value = Math.round(target * eased);
+
+    valueElement.textContent = value + suffix;
+
+    if (progress < 1) {
+      requestAnimationFrame(tick);
+    } else {
+      valueElement.textContent = target + suffix;
+    }
+  };
+
+  requestAnimationFrame(tick);
+};
+
+const checkCounters = () => {
+  statNumbers.forEach((el) => {
+    if (el.dataset.counted === 'true') return;
+
+    const rect = el.getBoundingClientRect();
+
+    if (
+      rect.top < window.innerHeight * 0.9 &&
+      rect.bottom > 0
+    ) {
+      animateCounter(el);
+    }
+  });
+};
+
+window.addEventListener('scroll', checkCounters, { passive: true });
+window.addEventListener('load', checkCounters);
+
+checkCounters();
 
   /* ---- CANVAS FRAME SCRUBBING ---- */
   const heroScrollContainer = document.querySelector('.hero-scroll-container');
